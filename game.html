@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .game-container {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid black;
+            background-color: #222;
+        }
+        .score-board {
+            margin-top: 10px;
+        }
+        .score {
+            font-size: 20px;
+            color: #fff;
+        }
+        .highscore {
+            font-size: 20px;
+            color: #ffeb3b;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="score-board">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="highscore">High Score: <span id="highscore">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const highscoreDisplay = document.getElementById('highscore');
+
+        const gridSize = 20;
+        const canvasSize = 400;
+        const maxScore = 99999;
+
+        let snake = [{ x: 9 * gridSize, y: 9 * gridSize }];
+        let direction = 'RIGHT';
+        let food = generateFood();
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+        let gameInterval;
+        
+        // Initialize the game
+        function startGame() {
+            document.addEventListener('keydown', changeDirection);
+            gameInterval = setInterval(gameLoop, 100);
+        }
+
+        // Main game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            moveSnake();
+            if (checkCollisions()) {
+                gameOver();
+                return;
+            }
+            drawSnake();
+            drawFood();
+            updateScore();
+            if (eatFood()) {
+                score++;
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('highScore', highScore);
+                }
+                food = generateFood();
+                growSnake();
+            }
+        }
+
+        // Handle key press for direction change
+        function changeDirection(event) {
+            if (event.key === 'ArrowUp' && direction !== 'DOWN') {
+                direction = 'UP';
+            } else if (event.key === 'ArrowDown' && direction !== 'UP') {
+                direction = 'DOWN';
+            } else if (event.key === 'ArrowLeft' && direction !== 'RIGHT') {
+                direction = 'LEFT';
+            } else if (event.key === 'ArrowRight' && direction !== 'LEFT') {
+                direction = 'RIGHT';
+            }
+        }
+
+        // Move the snake based on direction
+        function moveSnake() {
+            const head = { ...snake[0] };
+            if (direction === 'UP') head.y -= gridSize;
+            if (direction === 'DOWN') head.y += gridSize;
+            if (direction === 'LEFT') head.x -= gridSize;
+            if (direction === 'RIGHT') head.x += gridSize;
+
+            snake.unshift(head);
+            // Do not remove the last segment when the snake eats food (it grows longer)
+            if (!eatFood()) {
+                snake.pop();
+            }
+        }
+
+        // Grow the snake by adding a new segment at the end
+        function growSnake() {
+            // Add a new segment to the snake's body at the same position as the last segment
+            snake.push({ ...snake[snake.length - 1] });
+        }
+
+        // Draw the snake on the canvas
+        function drawSnake() {
+            snake.forEach(segment => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+            });
+        }
+
+        // Draw food on the canvas
+        function drawFood() {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, gridSize, gridSize);
+        }
+
+        // Check for collisions (wall or self)
+        function checkCollisions() {
+            const head = snake[0];
+            if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
+                return true;
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check if the snake eats the food
+        function eatFood() {
+            const head = snake[0];
+            return head.x === food.x && head.y === food.y;
+        }
+
+        // Generate new food coordinates
+        function generateFood() {
+            const foodX = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+            const foodY = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+            return { x: foodX, y: foodY };
+        }
+
+        // Update the score display
+        function updateScore() {
+            scoreDisplay.textContent = score;
+            highscoreDisplay.textContent = highScore > maxScore ? maxScore : highScore;
+        }
+
+        // Game over handling
+        function gameOver() {
+            clearInterval(gameInterval);
+            // Restart the game after a short delay (e.g., 1 second)
+            setTimeout(resetGame, 1000);
+        }
+
+        // Reset the game state
+        function resetGame() {
+            snake = [{ x: 9 * gridSize, y: 9 * gridSize }];
+            direction = 'RIGHT';
+            food = generateFood();
+            score = 0;
+            startGame();
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
